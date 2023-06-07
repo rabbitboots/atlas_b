@@ -1,4 +1,4 @@
--- (BETA)
+-- (BETA 0.0.2)
 --[[
 AtlasB: A texture atlas generator using a binary packing algorithm.
 The resulting textures are always square and power-of-two in size.
@@ -7,10 +7,9 @@ The resulting textures are always square and power-of-two in size.
 --[[
 MIT License
 
-AtlasB: Copyright (c) 2023 RBTS
+Copyright (c) 2023 RBTS
 
-
-packBin is based on:
+The binary tree packer is based on:
 https://github.com/jakesgordon/bin-packing/blob/master/js/packer.js
 
 Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016 Jake Gordon and contributors
@@ -39,16 +38,6 @@ SOFTWARE.
 local atlasB = {}
 
 
-local REQ_PATH = ... and (...):match("(.-)[^%.]+$") or ""
-
-
-local packBin = require(REQ_PATH .. "pack_bin")
-
-
-local _mt_ab = {}
-_mt_ab.__index = _mt_ab
-
-
 -- * General *
 
 
@@ -68,6 +57,74 @@ end
 
 
 -- * / General *
+
+
+-- * Binary tree packer *
+
+
+local function newRootNode(w, h)
+	return {x = 0, y = 0, w = w, h = h}
+end
+
+
+local function findNode(root, w, h)
+
+	if root then
+		if root.used then
+			return findNode(root.right, w, h) or findNode(root.down, w, h)
+
+		elseif w <= root.w and h <= root.h then
+			return root
+		end
+	end
+
+	-- (return nil)
+end
+
+
+local function splitNode(node, w, h)
+
+	node.used = true
+
+	if node.h - h > 0 then
+		node.down = {x = node.x, y = node.y + h, w = node.w, h = node.h - h}
+	end
+	if node.w - w > 0 then
+		node.right = {x = node.x + w, y = node.y, w = node.w - w, h = h}
+	end
+
+	return node
+end
+
+
+local function fitBoxes(root, boxes)
+
+	for _, box in ipairs(boxes) do
+		local node = findNode(root, box.w, box.h)
+
+		if node then
+			box.x = node.x
+			box.y = node.y
+
+			splitNode(node, box.w, box.h)
+
+		else
+			return false
+		end
+	end
+
+	return true
+end
+
+
+-- * / Binary tree packer *
+
+
+-- * Atlas structure *
+
+
+local _mt_ab = {}
+_mt_ab.__index = _mt_ab
 
 
 function atlasB.newAtlas(padding, extrude)
@@ -200,9 +257,9 @@ function _mt_ab:arrange(min, max)
 	while size <= max do
 		-- Skip sizes that are smaller than the combined area of all boxes and padding.
 		if size - pad >= area_sq and size >= min then
-			local bin = packBin.newBin(size - pad, size - pad)
+			local bin = newRootNode(size - pad, size - pad)
 
-			if bin:fitBoxes(self.boxes) then
+			if fitBoxes(bin, self.boxes) then
 				success = true
 				break
 			end
@@ -215,7 +272,7 @@ function _mt_ab:arrange(min, max)
 		return false
 	end
 
-	-- Apply padding offset to all boxes. In case of odd padding, shift box to the upper-left.
+	-- Offset all boxes right and down by half the padding value. In case of odd padding, shift boxes to the upper-left.
 	local pad_12 = math.floor(pad/2)
 	for _, box in ipairs(self.boxes) do
 		box.x = box.x + pad_12
@@ -292,8 +349,14 @@ function _mt_ab:renderImageData(pixel_format, r, g, b, a)
 		end
 	end
 
+	-- The final arranged rectangle coords + dimensions are in 'self.boxes':
+	-- box.x, box.y, box.iw, box.ih
+
 	return i_data
 end
+
+
+-- * / Atlas structure *
 
 
 return atlasB

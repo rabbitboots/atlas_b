@@ -15,6 +15,8 @@ AtlasB is a texture atlas packing library for the [LÖVE](https://love2d.org/) f
 
 4. If the arrangement was successful, render the atlas out to a new ImageData: `atlas:renderImageData()`
 
+5. Get the new rectangle positions from `atlas.boxes`: `box.x`, `box.y`, `box.iw`, `box.ih`
+
 See *main.lua* for an interactive example.
 
 
@@ -81,9 +83,10 @@ Renders the atlas layout to an ImageData.
 
 # MIT License
 
-AtlasB: Copyright (c) 2023 RBTS
+Copyright (c) 2023 RBTS
 
-*pack_bin.lua* is based on: https://github.com/jakesgordon/bin-packing/blob/master/js/packer.js
+Binary tree packing code is based on:
+https://github.com/jakesgordon/bin-packing/blob/master/js/packer.js
 
 Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016 Jake Gordon and contributors
 Lua version (c) 2020, 2023 RBTS

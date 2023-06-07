@@ -1,8 +1,8 @@
 MIT License
 
-AtlasB: Copyright (c) 2023 RBTS
+Copyright (c) 2023 RBTS
 
-'pack_bin.lua' is based on:
+Binary tree packing code is based on:
 https://github.com/jakesgordon/bin-packing/blob/master/js/packer.js
 
 Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016 Jake Gordon and contributors
