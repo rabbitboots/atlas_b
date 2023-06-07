@@ -56,6 +56,22 @@ local function errArgType(n, expected, val)
 end
 
 
+local function extrudeSubImage(src, x, y, w, h)
+
+	-- Edges
+	src:paste(src, x, y - 1, x, y, w, 1)
+	src:paste(src, x, y + h, x, y + h - 1, w, 1)
+	src:paste(src, x - 1, y, x, y, 1, h)
+	src:paste(src, x + w, y, x + w - 1, y, 1, h)
+
+	-- Corners
+	src:paste(src, x - 1, y - 1, x, y, 1, 1)
+	src:paste(src, x + w, y - 1, x + w - 1, y, 1, 1)
+	src:paste(src, x - 1, y + h, x, y + h - 1, 1, 1)
+	src:paste(src, x + w, y + h, x + w - 1, y + h - 1, 1, 1)
+end
+
+
 -- * / General *
 
 
@@ -308,44 +324,7 @@ function _mt_ab:renderImageData(pixel_format, r, g, b, a)
 		i_data:paste(box.i_data, box.x, box.y, box.ix, box.iy, box.iw, box.ih)
 
 		if self.extrude then
-			--[[
-			+-+---+-+
-			|5| 1 |6|
-			+-+---+-+
-			| |   | |
-			|3|   |4|
-			| |   | |
-			+-+---+-+
-			|7| 2 |8|
-			+-+---+-+
-			--]]
-			-- Edges: top, bottom, left, right
-			if box.y > 0 then
-				i_data:paste(box.i_data, box.x, box.y - 1, box.ix, box.iy, box.iw, 1)
-			end
-			if box.y + box.ih <= self.arranged_size then
-				i_data:paste(box.i_data, box.x, box.y + box.ih, box.ix, box.iy + box.ih - 1, box.iw, 1)
-			end
-			if box.x > 0 then
-				i_data:paste(box.i_data, box.x - 1, box.y, box.ix, box.iy, 1, box.ih)
-			end
-			if box.x + box.iw <= self.arranged_size then
-				i_data:paste(box.i_data, box.x + box.iw, box.y, box.ix + box.iw - 1, box.iy, 1, box.ih)
-			end
-
-			-- Corner pixels: upper-left, upper-right, bottom-left, bottom-right
-			if box.x > 0 and box.y > 0 then
-				i_data:paste(box.i_data, box.x - 1, box.y - 1, box.ix, box.iy, 1, 1)
-			end
-			if box.x + box.iw <= self.arranged_size and box.y > 0 then
-				i_data:paste(box.i_data, box.x + box.iw, box.y - 1, box.ix + box.iw - 1, box.iy, 1, 1)
-			end
-			if box.x > 0 and box.y + box.ih <= self.arranged_size then
-				i_data:paste(box.i_data, box.x - 1, box.y + box.ih, box.ix, box.iy + box.ih - 1, 1, 1)
-			end
-			if box.x + box.iw <= self.arranged_size and box.y + box.ih <= self.arranged_size then
-				i_data:paste(box.i_data, box.x + box.iw, box.y + box.ih, box.ix + box.iw - 1, box.iy + box.ih - 1, 1, 1)
-			end
+			extrudeSubImage(i_data, box.x, box.y, box.iw, box.ih)
 		end
 	end
 
