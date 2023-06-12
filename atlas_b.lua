@@ -265,7 +265,6 @@ function _mt_ab:arrange(min, max)
 
 	local success
 	while size <= max do
-		print("size", size, "max", max)
 		-- Skip sizes that are smaller than the combined area of all boxes and padding.
 		if size - pad >= area_sq and size >= min then
 			--local bin = newRootNode(size - pad, size - pad)
@@ -281,7 +280,6 @@ function _mt_ab:arrange(min, max)
 	end
 
 	if not success then
-		print("success", success)
 		return false
 	end
 
