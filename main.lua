@@ -17,6 +17,7 @@ local spritesheet2 = love.image.newImageData("demo_res/circles.png")
 local demo_font = love.graphics.newFont(14)
 local demo_padding = 0
 local demo_extrude = false
+local demo_gran = false
 local demo_render_boxes = false
 
 local demo_incl_s1 = true
@@ -63,17 +64,16 @@ local quads = {
 
 local function setupAtlas()
 
-	local do_extrude = (demo_padding >= 2 and demo_extrude and true or false)
-	atl = atlasB.newAtlas(demo_padding, do_extrude)
+	atl = atlasB.newAtlas(demo_padding, demo_extrude, demo_gran)
 
 	if demo_incl_s1 then
 		for id, quad in pairs(quads) do
-			atl:addBox(spritesheet1, "sq_" .. id, quad.x, quad.y, quad.w, quad.h)
+			atl:addBox(quad.x, quad.y, quad.w, quad.h, spritesheet1, "sq_" .. id)
 		end
 	end
 	if demo_incl_s2 then
 		for id, quad in pairs(quads) do
-			atl:addBox(spritesheet2, "ci_" .. id, quad.x, quad.y, quad.w, quad.h)
+			atl:addBox(quad.x, quad.y, quad.w, quad.h, spritesheet2, "ci_" .. id)
 		end
 	end
 
@@ -116,6 +116,10 @@ function love.keypressed(kc, sc)
 
 	elseif kc == "right" then
 		demo_padding = demo_padding + 1
+		setupAtlas()
+
+	elseif kc == "lshift" or kc == "rshift" then
+		demo_gran = not demo_gran
 		setupAtlas()
 
 	elseif kc == "space" then
@@ -174,14 +178,10 @@ function love.draw()
 
 	love.graphics.setFont(demo_font)
 	qp:movePosition(0, hud_y + 2)
-	qp:write("Left/Right: Padding (", demo_padding, ")\tSpace: Extrusion (", demo_extrude, ")\tTab: show layout (", demo_render_boxes, ")\t1,2: toggle spritesheet inclusion")
+	qp:write("Left/Right: Padding (", demo_padding, ")\tSpace: Extrusion (", demo_extrude, ")\tShift: granular (", demo_gran, ")\tTab: show layout (", demo_render_boxes, ")\t1,2: toggle spritesheet inclusion")
 	qp:down()
 	qp:write("Esc: quit")
 	if atl.arranged_size then
 		qp:write("\tAtlas size: ", atl.arranged_size)
-	end
-	qp:down()
-	if demo_extrude and demo_padding < 2 then
-		qp:write("(Extruding requires at least 2 padding.)")
 	end
 end

@@ -5,11 +5,13 @@
 AtlasB is a texture atlas packing library for the [LÖVE](https://love2d.org/) framework. It uses a binary packing algorithm to place smaller graphics into a combined square image with power-of-two dimensions.
 
 
-# Workflow
+# Workflows
+
+## With existing graphics
 
 1. Create an atlas object: `atlasB.newAtlas`
 
-2. Add LÖVE ImageData objects to the atlas: `atlas:addBox()` or `atlas:addBoxes()`
+2. Add LÖVE ImageData objects to the atlas with `atlas:addBox()`
 
 3. Arrange the atlas, specifying a minimum and maximum allowed size: `atlas:arrange()`
 
@@ -20,41 +22,45 @@ AtlasB is a texture atlas packing library for the [LÖVE](https://love2d.org/) f
 See *main.lua* for an interactive example.
 
 
+## For spritesheet arrangement before the graphics are rendered
+
+1. Create an atlas object: `atlasB.newAtlas`
+
+2. Add boxes with the predetermined dimensions for each undrawn graphic with `atlas:addBox()`.
+
+3. Arrange the atlas, specifying a minimum and maximum allowed size: `atlas:arrange()`
+
+4. If the arrangement was successful, create a canvas using `atlas.arranged_size` for the width and height, and use `atlas.boxes` to set up scissor boxes and offsets. Then draw away.
+
+
 # API
 
 ## atlasB.newAtlas
 
-Makes an atlas object.
+Makes a new atlas object.
 
-`local atlas = atlasB.newAtlas(padding, extrude)`
+`local atlas = atlasB.newAtlas(padding, extrude, gran)`
 
 * `padding`: *(0)* The amount of padding (in pixels) to apply around boxes. When padding is an odd number, the graphic is biased towards the upper-left.
-* `extrude`: *(false)* Whether to extrude (or "bleed") the edges of each graphic in a one-pixel perimeter. When used, *padding* must be at least 2.
+* `extrude`: *(false)* Whether to extrude (or "bleed") the edges of each graphic in a one-pixel perimeter. Extrusion is only applied when `padding` is at least 2.
+* `gran`: *(false)* When true, expands box dimensions based on `padding` so that boxes are placed with a rougher granularity. Only applied when `padding` is at least 2.
 
 **Returns:** The new atlas object.
 
 
 ## atlas:addBox
 
-Adds a box (a table with ImageData and coordinate information) to the atlas. Use this if you want to pull in multiple rectangles from a single ImageData.
+Adds a box to the atlas.
 
-`local success = atlas:addBox(i_data, image_id, x, y, w, h)`
+`local success = atlas:addBox(x, y, w, h, i_data, image_id)`
 
-* `i_data`: The source ImageData.
-* `image_id`: Optional variable to use for tie-breaking when sorting boxes. This is typically the source image filename.
 * `x`, `y`, `w`, `h`: The rectangular pixel area to use.
+* `i_data`: Optional source ImageData, if the graphic already exists.
+* `image_id`: Optional variable to use for tie-breaking when sorting boxes.
 
 **Returns:** The new box table, for tagging with additional bookkeeping info.
 
-
-## atlas:addBoxes
-
-Adds a set of boxes from an array of ImageData objects, with one box per ImageData. Use this if your graphics are stored as single images instead of spritesheets.
-
-`atlas:addBoxes(i_datas, image_ids)`
-
-* `i_datas`: Sequence of LÖVE ImageData objects.
-* `image_ids`: Optional hash table where the keys are the ImageData objects featured in `i_datas`. The values are strings (typically an image's filename) which are used as tie-breakers when sorting the boxes.
+**Note:** For unfinished graphics, you will need to add an identifier to the box table to keep track of which box belongs to which piece of art.
 
 
 ## atlas:arrange
@@ -71,7 +77,7 @@ Tries to arrange the atlas boxes in a square layout.
 
 ## atlas:renderImageData
 
-Renders the atlas layout to an ImageData.
+Renders the atlas layout to an ImageData. All atlas boxes must have been created with ImageData references.
 
 `local image_data = atlas:renderImageData(pixel_format, r, g, b, a)`
 

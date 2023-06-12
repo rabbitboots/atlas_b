@@ -1,4 +1,4 @@
--- (BETA 0.0.2)
+-- (BETA 0.0.3)
 --[[
 AtlasB: A texture atlas generator using a binary packing algorithm.
 The resulting textures are always square and power-of-two in size.
@@ -41,13 +41,10 @@ local atlasB = {}
 -- * General *
 
 
-local function errMustBeIntGE1(arg_n)
-	error("argument #" .. arg_n .. ": must be an integer >= 1.", 2)
-end
+local function errInt(arg_n, optional, op, n)
 
-
-local function errOptionalIntGE0(arg_n)
-	error("argument #" .. arg_n .. ": expected false/nil or an integer >= 0.", 2)
+	local str_between = optional and " expected false/nil or" or "must be"
+	error("argument #" .. arg_n .. ": " .. str_between .. " an integer " .. op .. " " .. n .. ".", 2)
 end
 
 
@@ -143,21 +140,20 @@ local _mt_ab = {}
 _mt_ab.__index = _mt_ab
 
 
-function atlasB.newAtlas(padding, extrude)
+function atlasB.newAtlas(padding, extrude, gran)
+
+	padding = padding or 0
 
 	-- Assertions
 	-- [[
-	if padding and (type(padding) ~= "number" or math.floor(padding) ~= padding) then errOptionalIntGE0(1) end
+	if type(padding) ~= "number" or padding < 0 or math.floor(padding) ~= padding then errInt(1, true, ">=", 0) end
 	--]]
-
-	if extrude and padding and padding < 2 then
-		error("when extruding, padding must be at least 2 pixels.")
-	end
 
 	local self = setmetatable({}, _mt_ab)
 
-	self.padding = padding or 0
+	self.padding = padding
 	self.extrude = extrude or false
+	self.granular = gran or false
 
 	-- Is a number when boxes are successfully arranged.
 	self.arranged_size = false
@@ -193,7 +189,7 @@ function _mt_ab.boxSort(a, b)
 
 	-- User didn't provide ID strings: give up
 	else
-		return tostring(a.i_data) > tostring(b.i_data)
+		return tostring(a) > tostring(b)
 	end
 end
 
@@ -210,11 +206,11 @@ function _mt_ab:calculateArea()
 end
 
 
-function _mt_ab:addBox(i_data, image_id, x, y, w, h)
+function _mt_ab:addBox(x, y, w, h, i_data, image_id)
 
 	-- Assertions
 	-- [[
-	if type(i_data) ~= "userdata" then errArgType(1, "userdata (LÖVE ImageData)", type(i_data))
+	if i_data and type(i_data) ~= "userdata" then errArgType(1, "nil/false or userdata (LÖVE ImageData)", type(i_data))
 	-- 'image_id' is optional and can be anything that is usable with a comparison operator.
 	-- TODO: coordinate and dimension checks.
 	end
@@ -238,17 +234,15 @@ function _mt_ab:addBox(i_data, image_id, x, y, w, h)
 	box.w = w + self.padding
 	box.h = h + self.padding
 
+	if self.granular and self.padding > 1 then
+		local half_pad = math.floor(self.padding / 2)
+		box.w = math.ceil(box.w / half_pad) * half_pad
+		box.h = math.ceil(box.h / half_pad) * half_pad
+	end
+
 	table.insert(self.boxes, box)
 
 	return box
-end
-
-
-function _mt_ab:addBoxes(i_datas, image_ids)
-
-	for i, i_data in ipairs(i_datas) do
-		self:addBox(i_data, image_ids[i_data], 0, 0, i_data:getWidth(), i_data:getHeight())
-	end
 end
 
 
@@ -256,8 +250,8 @@ function _mt_ab:arrange(min, max)
 
 	-- Assertions
 	-- [[
-	if type(min) ~= "number" or min < 1 or math.floor(min) ~= min then errMustBeIntGE1(1)
-	elseif type(max) ~= "number" or max < 1 or math.floor(max) ~= max then errMustBeIntGE1(2) end
+	if type(min) ~= "number" or min < 1 or math.floor(min) ~= min then errInt(1, false, ">=", 1)
+	elseif type(max) ~= "number" or max < 1 or math.floor(max) ~= max then errInt(2, false, ">=", 1) end
 	--]]
 
 	self.arranged_size = false
@@ -271,9 +265,11 @@ function _mt_ab:arrange(min, max)
 
 	local success
 	while size <= max do
+		print("size", size, "max", max)
 		-- Skip sizes that are smaller than the combined area of all boxes and padding.
 		if size - pad >= area_sq and size >= min then
-			local bin = newRootNode(size - pad, size - pad)
+			--local bin = newRootNode(size - pad, size - pad)
+			local bin = newRootNode(size, size)
 
 			if fitBoxes(bin, self.boxes) then
 				success = true
@@ -285,6 +281,7 @@ function _mt_ab:arrange(min, max)
 	end
 
 	if not success then
+		print("success", success)
 		return false
 	end
 
@@ -323,8 +320,10 @@ function _mt_ab:renderImageData(pixel_format, r, g, b, a)
 		-- [[DBG]] print(i, box, box.x, box.y, box.iw, box.ih, box.i_data)
 		i_data:paste(box.i_data, box.x, box.y, box.ix, box.iy, box.iw, box.ih)
 
-		if self.extrude then
-			extrudeSubImage(i_data, box.x, box.y, box.iw, box.ih)
+		if self.extrude and self.padding >= 2 then
+			for i = 0, (self.padding/2) - 1 do
+				extrudeSubImage(i_data, box.x - i, box.y - i, box.iw + i*2, box.ih + i*2)
+			end
 		end
 	end
 
